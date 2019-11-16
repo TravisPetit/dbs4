@@ -2,14 +2,16 @@ import numpy as np
 
 # LOAD DATA
 
-corruptedN = open("corruptedNames.txt","r")
-femaleFn   = open("femaleFirstnames.txt","r")
-maleFn     = open("maleFirstnames.txt","r")
-lastN      = open("lastnames.txt", "r")
+corruptedN  = open("corruptedNames.txt","r")
+femaleFn    = open("femaleFirstnames.txt","r")
+maleFn      = open("maleFirstnames.txt","r")
+lastN       = open("lastnames.txt", "r")
+generatedN  = open("generatednames.txt", "r")
 
 correctLastNames  = set()
 correctFirstNames = set()
 corrupedFL = [] #first and last names
+groundTruth = set()
 
 for lname in lastN:
     correctLastNames.add(lname.strip())
@@ -30,6 +32,12 @@ for line in corruptedN:
     except:
         print("Ignoring invalid name: " + line.strip())
 corruptedN.close()
+
+for line in generatedN:
+    LastName, FirstName = line.strip().split(" ")
+    groundTruth.add( [FirstName, LastName] )
+generatedN.close()
+
 
 # FUNCTIONS
 
@@ -170,8 +178,12 @@ def dist(x, y, method):
                 trigrams.add(tmp)
                 trigrams.add(tmp)
 
-            trigrams.add(w[-2] + w[-1] + "#")
-            trigrams.add(w[-1] + "##")
+            try:
+                trigrams.add(w[-2] + w[-1] + "#")
+                trigrams.add(w[-1] + "##")
+            except:
+                pass
+
             return trigrams
 
         tri_x = trigrams(x)
@@ -183,11 +195,25 @@ def dist(x, y, method):
 
 # CLEAN UP
 
+fixed = []
 methods = ["hamming", "soundex", "leven", "jaccard"]
 for method in methods:
-    print("Fixing with the " + method + " method ...")
-    f = open(method, "w+")
+    print("Using the " + method + " method ...")
+
+    fixed_with_method = set() #removes duplicates
     for fl in corrupedFL:
-        fixedF, fixedL = fix(fl, "jaccard")
-        f.write(fixedL + " " +  fixedF)
+        fixedF, fixedL = fix(fl, method)
+        fixed_with_method.add( (fixedL, fixedF) )
+
+    fixed.append(fixed_with_method)
+
+for i in [0,1,2,3]:
+    f = open(methods[i] + ".txt", "w+")
+    list_ = list(fixed[i])
+    for lf in list_:
+        f.write(lf[0] + " " + lf[1] + "\n")
     f.close()
+
+    print("True Positive Rate using method " + method[i])
+    tpr = len(fixed[i] & groundTruth) / len(groundTruth)
+    print(trp)
