@@ -35,7 +35,7 @@ corruptedN.close()
 
 for line in generatedN:
     LastName, FirstName = line.strip().split(" ")
-    groundTruth.add( [FirstName, LastName] )
+    groundTruth.add( (FirstName, LastName) )
 generatedN.close()
 
 
