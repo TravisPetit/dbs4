@@ -6,7 +6,7 @@ corruptedN  = open("corruptedNames.txt","r")
 femaleFn    = open("femaleFirstnames.txt","r")
 maleFn      = open("maleFirstnames.txt","r")
 lastN       = open("lastnames.txt", "r")
-generatedN  = open("generatednames.txt", "r")
+generatedN  = open("generatedNames.txt", "r")
 
 correctLastNames  = set()
 correctFirstNames = set()
