@@ -63,14 +63,6 @@ soundex_dict = {
 }
 
 
-def fix(fl, method):
-    """
-    fl = [FirstName, Lastname]
-    method = hamming | soundex | leven | jaccard
-    """
-    bc = best_candidate(fl, method)
-    return bc
-
 def best_candidate(fl, method):
     """
     Returns
@@ -202,7 +194,7 @@ for method in methods:
 
     fixed_with_method = set() #removes duplicates
     for fl in corrupedFL:
-        fixedF, fixedL = fix(fl, method)
+        fixedF, fixedL = best_candidate(fl, method)
         fixed_with_method.add( (fixedL, fixedF) )
 
     fixed.append(fixed_with_method)
