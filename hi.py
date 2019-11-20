@@ -1,45 +1,7 @@
 import numpy as np
+import time
 
-# LOAD DATA
-
-corruptedN  = open("corruptedNames.txt","r")
-femaleFn    = open("femaleFirstnames.txt","r")
-maleFn      = open("maleFirstnames.txt","r")
-lastN       = open("lastnames.txt", "r")
-generatedN  = open("generatedNames.txt", "r")
-
-correctLastNames  = set()
-correctFirstNames = set()
-corruptedFL = [] #first and last names
-groundTruth = set()
-
-for lname in lastN:
-    correctLastNames.add(lname.strip())
-lastN.close()
-
-for fname in maleFn:
-    correctFirstNames.add(fname.strip())
-maleFn.close()
-
-for fname in femaleFn:
-    correctFirstNames.add(fname.strip())
-femaleFn.close()
-
-for line in corruptedN:
-    try:
-        corruptedLastName, corruptedFirstName = line.strip().split(" ")
-        corruptedFL.append( [corruptedFirstName, corruptedLastName] )
-    except:
-        print("Ignoring invalid name: " + line.strip())
-        print()
-
-corruptedN.close()
-
-for line in generatedN:
-    LastName, FirstName = line.strip().split(" ")
-    groundTruth.add( (FirstName, LastName) )
-generatedN.close()
-
+print("Preprocessing ... ")
 
 soundex_dict = {
     "A" : "",
@@ -105,43 +67,58 @@ def jaccardify(w):
     return trigrams
 
 
-# SETUP
-print("preprocessing ... ")
-correctFirstNamesSoundex = [soundexify(name) for name in correctFirstNames]
-correctLastNamesSoundex = [soundexify(name) for name in correctLastNames]
+class word:
+    def __init__(self, w):
+        self.w = w
+        self.soundex = soundexify(w)
+        self.trigrams = jaccardify(w)
 
-corruptedFLSoundex = [[soundexify(n[0]), soundexify(n[1])] for n in corruptedFL]
+    def __repr__(self):
+        return self.w
 
-correctFirstNamesJaccard = [jaccardify(name) for name in correctFirstNames]
-correctLastNamesJaccard = [jaccardify(name) for name in correctLastNames]
+    def __str__(self):
+        return self.w
 
-corruptedFLJaccard = [[jaccardify(n[0]), jaccardify(n[1])] for n in corruptedFL]
+# LOAD DATA
+
+corruptedN  = open("corruptedNames.txt","r")
+femaleFn    = open("femaleFirstnames.txt","r")
+maleFn      = open("maleFirstnames.txt","r")
+lastN       = open("lastnames.txt", "r")
+generatedN  = open("generatedNames.txt", "r")
+
+correctLastNames  = set()
+correctFirstNames = set()
+corruptedFL = [] #first and last names
+groundTruth = set()
+
+for lname in lastN:
+    correctLastNames.add(word(lname.strip()))
+lastN.close()
+
+for fname in maleFn:
+    correctFirstNames.add(word(fname.strip()))
+maleFn.close()
+
+for fname in femaleFn:
+    correctFirstNames.add(word(fname.strip()))
+femaleFn.close()
+
+for line in corruptedN:
+    try:
+        corruptedLastName, corruptedFirstName = line.strip().split(" ")
+        corruptedFL.append( [word(corruptedFirstName), word(corruptedLastName)] )
+    except:
+        print("\tIgnoring invalid name: " + line.strip())
+
+corruptedN.close()
+
+for line in generatedN:
+    LastName, FirstName = line.strip().split(" ")
+    groundTruth.add( (FirstName, LastName) )
+generatedN.close()
+
 print("Done!\n")
-
-
-def firstNames(method):
-    if method == "hamming" : return correctFirstNames
-    if method == "leven"   : return correctFirstNames
-    if method == "soundex" : return correctFirstNamesSoundex
-    if method == "jaccard" : return correctFirstNamesJaccard
-    raise Exception("Bad input: {}".format(method))
-
-
-def lastNames(method):
-    if method == "hamming" : return correctLastNames
-    if method == "leven"   : return correctLastNames
-    if method == "soundex" : return correctLastNamesSoundex
-    if method == "jaccard" : return correctLastNamesJaccard
-    raise Exception("Bad input: {}".format(method))
-
-
-def fl_list(method):
-    if method == "hamming" : return corruptedFL
-    if method == "leven"   : return corruptedFL
-    if method == "soundex" : return corruptedFLSoundex
-    if method == "jaccard" : return corruptedFLJaccard
-    raise Exception("Bad input: {}".format(method))
-
 
 def best_candidate(fl, method):
     """
@@ -149,44 +126,41 @@ def best_candidate(fl, method):
     ( argmin_{x in FN} dist(x, fl[0]), argmin_{x in LN} dist(x, fl[1]) )
     """
     if fl[0] in correctFirstNames:
-        FirstN = fl[0]
+        FirstN = fl[0].w
     else:
-        distFn = ((x, dist(x, fl[0], method)) for x in firstNames(method))
+        distFn = ((x.w, dist(x, fl[0], method)) for x in correctFirstNames)
         FirstN = min(distFn, key=lambda x : x[1])[0]
 
     if fl[1] in correctLastNames:
-        LastN = fl[1]
+        LastN = fl[1].w
     else:
-        distLn = ((x, dist(x, fl[1], method)) for x in lastNames(method))
+        distLn = ((x.w, dist(x, fl[1], method)) for x in correctLastNames)
         LastN = min(distLn, key=lambda x : x[1])[0]
 
     return FirstN, LastN
 
 def dist(x, y, method):
     if method == "hamming":
-        dist = abs( len(x) - len(y) ) # e.g. dist(Rik, Travis) = 3, dist(bob, dan) = 0
+        x, y = x.w, y.w
+
         short = x if len(x) <= len(y) else y
+        long_ = x if len(x) >  len(y) else y
 
-        long_ = {x,y} - {short}
-        if long_:
-            long_ = list(long_)[0]
-        else:
-            return 0 # both names are equal
-
-        for i in range(dist):
-            short += "#" # Travis, Rik -> Travis, Rik###
+        for i in range(len(short), len(long_)):
+            short += "#"
 
         score = 0
-        for i in range(len(long_)):
-            if short[i] != long_[i]:
-                score += 1
 
+        for ch1, ch2 in zip(x, y):
+            if ch1 != ch2:
+                score += 1
         return score
 
     if method == "soundex":
-        return int(x == y)
+        return int(x.soundex == y.soundex)
 
     if method == "leven":
+        x, y = x.w, y.w
         # from https://stackabuse.com/levenshtein-distance-and-text-similarity-in-python/
         size_x = len(x) + 1
         size_y = len(y) + 1
@@ -213,7 +187,7 @@ def dist(x, y, method):
         return (matrix[size_x - 1, size_y - 1])
 
     if method == "jaccard":
-        Jxy = len(x & y) / len(x | y)
+        Jxy = len(x.trigrams & y.trigrams) / len(x.trigrams | y.trigrams)
         return 1 - Jxy
 
 # CLEAN UP
@@ -221,20 +195,21 @@ def dist(x, y, method):
 fixed = []
 methods = ["hamming", "soundex", "leven", "jaccard"]
 #methods = ["soundex", "hamming", "leven", "jaccard"]
+#methods = ["jaccard", "hamming", "leven", "soundex"]
 
+start = time.time()
 for method in methods:
     print("Using the " + method + " method ...")
 
     fixed_with_method = set() #removes duplicates
 
-    list_ = fl_list(method)
-
     i = 0
-    for fl in list_:
+    for fl in corruptedFL:
         i+=1
         fixedF, fixedL = best_candidate(fl, method)
         fixed_with_method.add( (fixedL, fixedF) )
-        if i % 200 == 0:
+
+        if i % (5 * 2720) == 0:
             print(str(round(i / len(corruptedFL) * 100,2)) + " %")
 
     fixed.append(fixed_with_method)
@@ -249,3 +224,9 @@ for i in [0,1,2,3]:
     print("True Positive Rate using method " + method[i])
     tpr = len(fixed[i] & groundTruth) / len(groundTruth)
     print(tpr)
+
+end = time.time()
+time_elapsed = end - start
+time_elapsed /= 60 # minutes
+
+print("Time time elapsed: {} minutes ".format(time_elapsed))
