@@ -62,19 +62,33 @@ soundex_dict = {
     "R" : "6"
 }
 
+def firstNames(method):
+    if method == "hamming" or method == "leven":
+        return correctFirstNames
+    elif method == "soundex":
+        return correctFirstNamesSoundex
+    else:
+        return correctFirstNamesJaccard
+
 
 def best_candidate(fl, method):
     """
     Returns
     ( argmin_{x in FN} dist(x, fl[0]), argmin_{x in LN} dist(x, fl[1]) )
     """
-    distFn = [(x, dist(x, fl[0], method)) for x in correctFirstNames]
-    distFn.sort(key=lambda s: s[1], reverse=True)
+    if fl[0][0] in correctFirstNames:
+        FirstN = fl[0][0]
+    else:
+        distFn = ((x, dist(x, fl[0][1], method)) for x in firstNames(method))
+        FirstN = min(distFn, key=lambda x : x[1])[0]
 
-    distLn = [(x, dist(x, fl[1], method)) for x in correctLastNames]
-    distLn.sort(key=lambda s: s[1], reverse=True)
+    if fl[1][0] in correctLastNames:
+        lastN = fl[1][0]
+    else:
+        distLn = ((x, dist(x, fl[1][1], method)) for x in lastNames(method))
+        LastN = min(distLn, key=lambda x : x[1])[0]
 
-    return distFn[0][0], distLn[0][0]
+    return FirstN, LastN
 
 def dist(x, y, method):
     if method == "hamming":
@@ -193,9 +207,13 @@ for method in methods:
     print("Using the " + method + " method ...")
 
     fixed_with_method = set() #removes duplicates
+    i = 0
     for fl in corrupedFL:
+        i+=1
         fixedF, fixedL = best_candidate(fl, method)
         fixed_with_method.add( (fixedL, fixedF) )
+        if i % 50 == 0:
+            print(str(round(i / len(corrupedFL) * 100,2)) + " %")
 
     fixed.append(fixed_with_method)
 
@@ -208,4 +226,4 @@ for i in [0,1,2,3]:
 
     print("True Positive Rate using method " + method[i])
     tpr = len(fixed[i] & groundTruth) / len(groundTruth)
-    print(trp)
+    print(tpr)
