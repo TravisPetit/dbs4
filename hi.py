@@ -190,12 +190,17 @@ def dist(x, y, method):
         Jxy = len(x.trigrams & y.trigrams) / len(x.trigrams | y.trigrams)
         return 1 - Jxy
 
+    if method == "w_sum":
+        w_hamming = 0.2
+        w_soundex = 0.2
+        w_jaccard = 0.6
+        return w_hamming * dist(x,y, "hamming") + w_jaccard * dist(x,y,"jaccard") + w_soundex*dist(x,y,"soundex")
+
 # CLEAN UP
 
 fixed = []
-methods = ["hamming", "soundex", "leven", "jaccard"]
-#methods = ["soundex", "hamming", "leven", "jaccard"]
-#methods = ["jaccard", "hamming", "leven", "soundex"]
+#methods = ["hamming", "soundex", "leven", "jaccard"]
+methods = ["w_sum"]
 
 start = time.time()
 for method in methods:
@@ -214,14 +219,14 @@ for method in methods:
 
     fixed.append(fixed_with_method)
 
-for i in [0,1,2,3]:
+for i in range(len(methods)):
     f = open(methods[i] + ".txt", "w+")
     list_ = list(fixed[i])
     for lf in list_:
         f.write(lf[0] + " " + lf[1] + "\n")
     f.close()
 
-    print("True Positive Rate using method " + method[i])
+    print("True Positive Rate using method " + methods[i])
     tpr = len(fixed[i] & groundTruth) / len(groundTruth)
     print(tpr)
 
