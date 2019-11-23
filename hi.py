@@ -33,6 +33,10 @@ soundex_dict = {
 }
 
 def soundexify(name):
+    """
+    Returns the soundex code of a word
+    e.g. soundexify("Rupert") = "R163"
+    """
     code = name[0]
     name = name.replace(name[0],"",1)
     name = name[0:3]
@@ -47,6 +51,10 @@ def soundexify(name):
 
 
 def jaccardify(w):
+    """
+    Returns the trigrams of a word as a set
+    e.g. jaccardify("abc") = {##a, #ab, abc, bc#, ##c}
+    """
     trigrams = set()
     for i in range(len(w)):
         tmp = ""
@@ -123,7 +131,11 @@ print("Done!\n")
 def best_candidate(fl, method):
     """
     Returns
-    ( argmin_{x in FN} dist(x, fl[0]), argmin_{x in LN} dist(x, fl[1]) )
+    argmin_{x in FN} dist(x, fl[0]) and
+    argmin_{x in LN} dist(x, fl[1])
+
+    where
+    fl = [firstname, lastname]
     """
     if fl[0] in correctFirstNames:
         FirstN = fl[0].w
@@ -193,14 +205,18 @@ def dist(x, y, method):
     if method == "w_sum":
         w_hamming = 0.2
         w_soundex = 0.2
-        w_jaccard = 0.6
-        return w_hamming * dist(x,y, "hamming") + w_jaccard * dist(x,y,"jaccard") + w_soundex*dist(x,y,"soundex")
+        w_jaccard = 0.2
+        w_leven   = 0.4
+        return w_hamming * dist(x,y,"hamming") +\
+               w_jaccard * dist(x,y,"jaccard") +\
+               w_soundex * dist(x,y,"soundex") +\
+               w_leven   * dist(x,y,"leven")
 
 # CLEAN UP
 
 fixed = []
-#methods = ["hamming", "soundex", "leven", "jaccard"]
-methods = ["w_sum"]
+#methods = ["hamming", "soundex", "leven", "jaccard", "w_sum"]
+methods = ["hamming", "soundex", "leven", "jaccard"]
 
 start = time.time()
 for method in methods:
